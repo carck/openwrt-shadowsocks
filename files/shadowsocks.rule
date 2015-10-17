@@ -37,7 +37,9 @@ flush_r() {
 		sed -e 's/^-A/$ipt_n -D/' -e 's/$/;/')
 
 	for chain in $(echo "$IPT" | awk '/^:SS_SPEC/{print $1}'); do
-		$ipt_n -F ${chain:1} 2>/dev/null && $ipt_n -X ${chain:1}
+		$ipt_n -F ${chain:1} 2>/dev/null && \
+		$ipt_n -D zone_lan_prerouting -j ${chain:1} && \
+		$ipt_n -X ${chain:1}
 	done
 
 	ipset -X ss_spec_wan_ac 2>/dev/null
@@ -50,17 +52,8 @@ ipset_r() {
 		$(for ip in $WAN_FW_IP; do echo "add ss_spec_wan_ac $ip"; done)
 EOF
 	$ipt_n -N SS_SPEC_WAN_AC && \
+	$ipt_n -I zone_lan_prerouting -j SS_SPEC_WAN_AC && \
 	$ipt_n -A SS_SPEC_WAN_AC -m set --match-set ss_spec_wan_ac dst -p tcp -j REDIRECT --to-ports $local_port
-	return $?
-}
-
-fw_rule() {
-	$ipt_n -N SS_SPEC_WAN_FW && \
-	$ipt_n -A SS_SPEC_WAN_FW -p tcp \
-		-j REDIRECT --to-ports $local_port 2>/dev/null || {
-		loger 3 "Can't redirect, please check the iptables."
-		exit 1
-	}
 	return $?
 }
 
@@ -130,6 +123,6 @@ if [ -f "$IGNORE" ]; then
 	IGNORE_IP=$(cat $IGNORE 2>/dev/null)
 fi
 
-flush_r && fw_rule && ipset_r
+flush_r && ipset_r
 
 exit $?
