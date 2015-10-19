@@ -30,16 +30,16 @@ loger() {
 ipt_n="iptables -t nat"
 
 flush_r() {
-	line_num=`$ipt_n -L zone_lan_prerouting --line-numbers|grep ss_spec_wan_ac|awk"{print $0}"`
+	line_num=`$ipt_n -L zone_lan_prerouting --line-numbers | grep ss_spec_wan_ac | sort -nr | awk '{print $1}'`
 	
-	if [ -n $line_num ]
-	then
-		rule_num=`expr $line_num + 1`
-		$ipt_n -D zone_lan_prerouting $rule_num
-	fi
+	for i in $line_num
+	do
+		$ipt_n -D zone_lan_prerouting $i	
+	done
 	
 	ipset -X ss_spec_wan_ac 2>/dev/null
 	return 0
+
 }
 
 ipset_r() {
