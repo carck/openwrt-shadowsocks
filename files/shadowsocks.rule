@@ -30,8 +30,14 @@ loger() {
 ipt_n="iptables -t nat"
 
 flush_r() {
-	ipset -! -R create ss_spec_wan_ac 2>/dev/null
-	$ipt_n -D zone_lan_prerouting -m set --match-set ss_spec_wan_ac dst -p tcp -j REDIRECT --to-ports $local_port	
+	line_num=`$ipt_n -L zone_lan_prerouting --line-numbers|grep ss_spec_wan_ac|awk"{print $0}"`
+	
+	if [-n $line_num]
+	then
+		rule_num=`expr $line_num + 1`
+		$ipt_n -D zone_lan_prerouting $rule_num
+	fi
+	
 	ipset -X ss_spec_wan_ac 2>/dev/null
 	return 0
 }
